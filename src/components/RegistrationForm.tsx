@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { db, signInWithGoogle, auth } from '../lib/firebase';
+import { useNavigate } from 'react-router-dom';
+import { db, signInWithGoogle, auth, isAdmin } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { handleFirestoreError, OperationType } from '../lib/errorHandling';
 import { motion, AnimatePresence } from 'motion/react';
@@ -96,6 +97,7 @@ const JLYCC_BRANCHES = [
 });
 
 export default function RegistrationForm() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState<FormData>(INITIAL_DATA);
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,7 +111,7 @@ export default function RegistrationForm() {
     { id: 'contact', title: "What's your contact number?", field: 'contactNumber', placeholder: "+63 9XX XXX XXXX" },
     { id: 'socials', title: "Your Social Accounts", multi: true },
     { id: 'branch', title: "Which JLYCC branch are you from?", field: 'churchBranch' },
-    { id: 'experience', title: "Multimedia experience level?", field: 'experience' },
+    { id: 'experience', title: "Skill experience level?", field: 'experience' },
     { id: 'role', title: "What is your primary role?", field: 'role', placeholder: "e.g. Director, Camera, Editor..." },
     { id: 'department', title: "Your department or organization?", field: 'department', placeholder: "e.g. Media Team, Youth..." },
     { id: 'topics', title: "Which topics interest you most?", field: 'topics' },
@@ -143,12 +145,24 @@ export default function RegistrationForm() {
       return;
     }
 
-    // Admin Check
+    // Admin Check - if they typed 'admin', try to sign in but stay on current step if it fails
     if (steps[currentStep].id === 'firstName' && formData.firstName.toLowerCase() === 'admin') {
       try {
-        await signInWithGoogle();
-      } catch (e) {
-        console.error("Admin OAuth failed", e);
+        const result = await signInWithGoogle();
+        if (isAdmin(result.user.email)) {
+          navigate('/admin');
+          return;
+        } else {
+          setError("You are not authorized as an admin.");
+          return;
+        }
+      } catch (e: any) {
+        if (e.code === 'auth/popup-closed-by-user') {
+          setError("Login cancelled. If you are a participant, please enter your real name.");
+        } else {
+          setError(`Auth Error: ${e.message}`);
+        }
+        return;
       }
     }
 
@@ -228,38 +242,43 @@ export default function RegistrationForm() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="max-w-md w-full backdrop-blur-[100px] bg-white/[0.03] border border-white/10 rounded-[50px] p-12 text-center relative z-10 shadow-2xl"
+          className="max-w-md w-full backdrop-blur-[120px] bg-white/[0.04] border border-white/10 rounded-[60px] p-12 text-center relative z-10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] overflow-hidden"
         >
-          <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-8 border border-green-500/30">
-            <CheckCircle className="text-green-500 w-10 h-10" />
-          </div>
-          <h2 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase italic">Confirmed</h2>
-          <p className="text-slate-400 mb-10 italic text-sm">Excellent, <span className="font-bold text-white uppercase">{successInfo.name}</span>. Your registration is secured.</p>
+          {/* Inner Glow Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none"></div>
           
-          <div className="bg-white p-6 rounded-[32px] inline-block mb-10 shadow-[0_0_50px_-10px_rgba(255,255,255,0.2)]">
-            <QRCodeSVG 
-              id="registration-qr"
-              value={successInfo.id} 
-              size={180}
-              level="H"
-              includeMargin={true}
-            />
-          </div>
+          <div className="relative z-10">
+            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-8 border border-green-500/30">
+              <CheckCircle className="text-green-500 w-10 h-10" />
+            </div>
+            <h2 className="text-4xl font-black text-white mb-2 tracking-tighter uppercase italic">Confirmed</h2>
+            <p className="text-slate-400 mb-10 italic text-sm">Excellent, <span className="font-bold text-white uppercase">{successInfo.name}</span>. Your registration is secured.</p>
+            
+            <div className="bg-white p-6 rounded-[40px] inline-block mb-10 shadow-[0_0_50px_-10px_rgba(255,255,255,0.2)]">
+              <QRCodeSVG 
+                id="registration-qr"
+                value={successInfo.id} 
+                size={180}
+                level="H"
+                includeMargin={true}
+              />
+            </div>
 
-          <div className="flex flex-col gap-4">
-            <button 
-              onClick={downloadQR}
-              className="w-full py-5 bg-white text-[#0a0a0a] rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-400 hover:text-white transition-all flex items-center justify-center gap-3 shadow-xl"
-            >
-              <Download className="w-5 h-5" />
-              Download QR
-            </button>
-            <button 
-              onClick={() => { setSuccessInfo(null); setCurrentStep(0); }}
-              className="w-full py-5 bg-white/5 text-slate-400 rounded-2xl font-black uppercase tracking-[0.2em] text-sm border border-white/10 hover:bg-white/10 transition-all"
-            >
-              New Entry
-            </button>
+            <div className="flex flex-col gap-4">
+              <button 
+                onClick={downloadQR}
+                className="w-full py-5 bg-white text-[#0a0a0a] rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-blue-500 hover:text-white hover:scale-105 transition-all flex items-center justify-center gap-3 shadow-xl"
+              >
+                <Download className="w-5 h-5" />
+                Download QR
+              </button>
+              <button 
+                onClick={() => { setSuccessInfo(null); setCurrentStep(0); }}
+                className="w-full py-5 bg-white/5 text-slate-400 rounded-2xl font-black uppercase tracking-[0.2em] text-sm border border-white/10 hover:bg-white/10 transition-all"
+              >
+                New Entry
+              </button>
+            </div>
           </div>
         </motion.div>
       </div>
@@ -279,7 +298,7 @@ export default function RegistrationForm() {
            <div>
              <h1 className="text-3xl font-black tracking-tight uppercase italic text-white flex items-center gap-3">
                <Zap className="w-6 h-6 text-blue-500 fill-blue-500" />
-               JLYCC MULTIMEDIA
+               JLYCC ZOOM, WAVE & LIGHTS
              </h1>
              <p className="text-[10px] uppercase tracking-[0.5em] font-bold text-slate-500 mt-2">Registration Experience v2.0</p>
            </div>
@@ -290,7 +309,10 @@ export default function RegistrationForm() {
            </div>
         </header>
 
-        <div className="backdrop-blur-[120px] bg-white/[0.02] border border-white/5 rounded-[60px] p-8 md:p-16 min-h-[500px] flex flex-col justify-center relative shadow-2xl">
+        <div className="backdrop-blur-[160px] bg-white/[0.03] border border-white/10 rounded-[60px] p-8 md:p-16 min-h-[520px] flex flex-col justify-center relative shadow-[0_64px_128px_-32px_rgba(0,0,0,0.8)]">
+          {/* Inner Gloss */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] via-transparent to-transparent rounded-[60px] pointer-events-none"></div>
+          
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -410,8 +432,8 @@ function InputField({ type = "text", placeholder, icon, value, onChange }: {
         onChange={e => onChange(e.target.value)}
         autoFocus
         className={cn(
-          "w-full bg-white/5 border-2 border-white/10 rounded-[35px] py-8 focus:ring-12 focus:ring-blue-500/10 focus:border-white/20 outline-none transition-all font-black text-2xl md:text-3xl text-white placeholder-slate-700 italic tracking-tight",
-          icon ? "pl-20 pr-8" : "px-10"
+          "w-full bg-white/[0.03] border-2 border-white/10 rounded-[35px] py-9 focus:ring-[20px] focus:ring-blue-500/10 focus:border-white/30 outline-none transition-all font-black text-2xl md:text-3xl text-white placeholder-slate-700 italic tracking-tight",
+          icon ? "pl-22 pr-8" : "px-10"
         )}
       />
     </div>
@@ -431,8 +453,8 @@ function DropdownField({ options, icon, value, onChange }: {
         value={value}
         onChange={e => onChange(e.target.value)}
         className={cn(
-          "w-full bg-white/5 border-2 border-white/10 rounded-[35px] py-8 focus:ring-12 focus:ring-blue-500/10 focus:border-white/20 outline-none transition-all font-black text-2xl md:text-3xl text-white appearance-none italic tracking-tight",
-          icon ? "pl-20 pr-12" : "px-10"
+          "w-full bg-white/[0.03] border-2 border-white/10 rounded-[35px] py-9 focus:ring-[20px] focus:ring-blue-500/10 focus:border-white/30 outline-none transition-all font-black text-2xl md:text-3xl text-white appearance-none italic tracking-tight",
+          icon ? "pl-22 pr-12" : "px-10"
         )}
       >
         <option value="" className="bg-[#1a1a1a]">Select your branch...</option>
@@ -455,7 +477,7 @@ function TextAreaField({ placeholder, value, onChange }: { placeholder?: string,
       value={value}
       onChange={e => onChange(e.target.value)}
       autoFocus
-      className="w-full bg-white/5 border-2 border-white/10 rounded-[40px] p-10 focus:ring-12 focus:ring-blue-500/10 focus:border-white/20 outline-none transition-all font-bold text-2xl text-white italic placeholder-slate-700 leading-relaxed"
+      className="w-full bg-white/[0.03] border-2 border-white/10 rounded-[40px] p-10 focus:ring-[20px] focus:ring-blue-500/10 focus:border-white/30 outline-none transition-all font-bold text-2xl text-white italic placeholder-slate-700 leading-relaxed"
     />
   );
 }

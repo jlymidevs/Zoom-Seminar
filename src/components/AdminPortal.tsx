@@ -178,6 +178,12 @@ export default function AdminPortal() {
   registrations.forEach(r => r.topics.forEach(t => topicsCount[t] = (topicsCount[t] || 0) + 1));
   const topicsData = Object.entries(topicsCount).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
 
+  const attendanceData = [
+    { name: 'Yes', value: registrations.filter(r => r.willAttend === 'Yes').length },
+    { name: 'Maybe', value: registrations.filter(r => r.willAttend === 'Maybe').length },
+    { name: 'No', value: registrations.filter(r => r.willAttend === 'No').length },
+  ];
+
   const COLORS = ['#002D62', '#0055A4', '#007FFF', '#50BFE6', '#00C7B1', '#00843D'];
 
   const filteredRegistrations = registrations.filter(r => 
@@ -216,21 +222,29 @@ export default function AdminPortal() {
         </nav>
 
         <div className="pt-6 border-t border-slate-100 flex flex-col gap-4">
-           <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 rounded-xl overflow-hidden">
-             <div className="w-8 h-8 rounded-full bg-[#002D62] text-white flex items-center justify-center text-xs font-bold shrink-0 uppercase">
+           <div className="flex items-center gap-3 px-3 py-3 bg-slate-900 rounded-2xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.1)] border border-slate-800">
+             <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black shrink-0 uppercase italic text-lg">
                {user.email?.[0]}
              </div>
              <div className="truncate min-w-0">
-               <p className="text-xs font-bold text-slate-900 truncate tracking-tight">{user.displayName || 'Admin'}</p>
-               <p className="text-[10px] text-slate-500 truncate lowercase">{user.email}</p>
+               <div className="flex items-center gap-1.5">
+                 <p className="text-[11px] font-black text-white truncate tracking-tight uppercase italic">{user.displayName || 'Admin'}</p>
+                 {user.emailVerified && <ShieldCheck className="w-3 h-3 text-blue-400" />}
+               </div>
+               <p className={cn(
+                 "text-[9px] font-bold uppercase tracking-widest",
+                 user.emailVerified ? "text-blue-400" : "text-amber-400"
+               )}>
+                 {user.emailVerified ? 'Verified Admin' : 'Unverified'}
+               </p>
              </div>
            </div>
            <button 
              onClick={handleLogout}
-             className="flex items-center gap-3 px-3 py-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all font-medium text-sm"
+             className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all font-black text-[10px] uppercase tracking-widest italic"
            >
              <LogOut className="w-4 h-4" />
-             Sign Out
+             Sign Out System
            </button>
         </div>
       </aside>
@@ -339,6 +353,39 @@ export default function AdminPortal() {
                             </div>
                           ))}
                         </div>
+                     </div>
+                  </div>
+
+                  {/* Attendance Bar Chart */}
+                  <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm relative overflow-hidden group lg:col-span-2">
+                     <div className="flex items-center justify-between mb-8">
+                       <h3 className="text-lg font-black text-slate-900 uppercase italic">Attendance Propensity</h3>
+                       <div className="p-2 bg-slate-50 rounded-lg"><Users className="w-4 h-4 text-[#002D62]" /></div>
+                     </div>
+                     <div className="h-72">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={attendanceData} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                            <XAxis type="number" hide />
+                            <YAxis 
+                              dataKey="name" 
+                              type="category" 
+                              axisLine={false} 
+                              tickLine={false} 
+                              tick={{ fill: '#94a3b8', fontSize: 14, fontWeight: 900 }}
+                              width={80}
+                            />
+                            <Tooltip 
+                              cursor={{ fill: 'transparent' }}
+                              contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                            />
+                            <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={40}>
+                              {attendanceData.map((_, index) => (
+                                <Cell key={`cell-at-${index}`} fill={['#10b981', '#f59e0b', '#ef4444'][index % 3]} />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
                      </div>
                   </div>
                 </div>
