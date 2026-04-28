@@ -46,14 +46,14 @@ service cloud.firestore {
              (data.get('department', '') is string) && (data.get('department', '').size() <= 200) &&
              (data.get('role', '') is string) && (data.get('role', '').size() <= 200) &&
              data.churchBranch is string && data.churchBranch.size() > 0 && data.churchBranch.size() <= 100 &&
-             (data.get('experience', '') in ['', 'Beginner', 'Intermediate', 'Advanced']) &&
+             (data.get('experience', '') is string) && (data.get('experience', '') in ['', 'Beginner', 'Intermediate', 'Advanced']) &&
              (data.get('topics', []) is list) &&
              (data.get('learnGoals', '') is string) && (data.get('learnGoals', '').size() <= 1000) &&
              (data.get('equipment', []) is list) &&
              (data.get('challenges', []) is list) &&
-             (data.get('cameraFraming', '') in ['', 'Yes', 'No', 'A little']) &&
-             (data.get('lightingTerms', '') in ['', 'Yes', 'No', 'A little']) &&
-             (data.get('soundMixer', '') in ['', 'Yes', 'No', 'A little']) &&
+             (data.get('cameraFraming', '') is string) && (data.get('cameraFraming', '') in ['', 'Yes', 'No', 'Basic']) &&
+             (data.get('lightingTerms', '') is string) && (data.get('lightingTerms', '') in ['', 'Yes', 'No', 'Basic']) &&
+             (data.get('soundMixer', '') is string) && (data.get('soundMixer', '') in ['', 'Yes', 'No', 'Basic']) &&
              (data.get('preferredSchedule', '') is string) && (data.get('preferredSchedule', '').size() <= 200) &&
              (data.get('willAttend', '') in ['Yes', 'Maybe', 'No']) &&
              (data.get('questions', '') is string) && (data.get('questions', '').size() <= 1000) &&

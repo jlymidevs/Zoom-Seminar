@@ -196,17 +196,43 @@ export default function RegistrationForm() {
     setError(null);
 
     try {
-      if (!auth.currentUser) await signInWithGoogle();
+      let finalEmail = formData.email;
+      
+      // Try to verify identity if not signed in, but handle errors gracefully
+      if (!auth.currentUser) {
+        try {
+          const result = await signInWithGoogle();
+          finalEmail = result.user.email || formData.email;
+        } catch (authErr: any) {
+          console.error("Auth failed during submission:", authErr);
+          if (authErr.code === 'auth/unauthorized-domain' || authErr.message?.includes('unauthorized domain')) {
+            setError("Domain Error: This website domain is not authorized in Firebase. Please add it to 'Authorized Domains' in your Firebase Console (Auth > Settings).");
+            setIsSubmitting(false);
+            return;
+          }
+          // For other auth errors, we inform the user but they might need to try again
+          setError(`Identity verification failed: ${authErr.message}. Please try again.`);
+          setIsSubmitting(false);
+          return;
+        }
+      } else {
+        finalEmail = auth.currentUser.email || formData.email;
+      }
       
       const docRef = await addDoc(collection(db, 'registrations'), {
         ...formData,
-        email: auth.currentUser?.email || formData.email,
+        email: finalEmail,
         createdAt: serverTimestamp(),
       });
       setSuccessInfo({ id: docRef.id, name: `${formData.firstName} ${formData.lastName}` });
     } catch (err: any) {
-      setError("Failed to submit. Please try again.");
-      handleFirestoreError(err, OperationType.WRITE, 'registrations');
+      console.error("Submission failed:", err);
+      setError(`Submission failed: ${err.message || 'Unknown error'}. Please check your connection and try again.`);
+      try {
+        handleFirestoreError(err, OperationType.WRITE, 'registrations');
+      } catch (e) {
+        // handleFirestoreError logs and re-throws
+      }
     } finally {
       setIsSubmitting(false);
     }
