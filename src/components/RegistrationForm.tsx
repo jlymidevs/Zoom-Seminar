@@ -104,7 +104,13 @@ export default function RegistrationForm() {
   const [successInfo, setSuccessInfo] = useState<{ id: string, name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const isMobileWebview = () => {
+    const ua = navigator.userAgent || navigator.vendor || (window as any).opera;
+    return (ua.indexOf("FBAN") > -1) || (ua.indexOf("FBAV") > -1) || (ua.indexOf("Instagram") > -1) || (ua.indexOf("Messenger") > -1);
+  };
+
   const steps = [
+    { id: 'start', title: "Ready to start your registration?", field: 'email', placeholder: "Your email..." },
     { id: 'firstName', title: "First, what's your first name?", field: 'firstName', placeholder: "Enter your first name..." },
     { id: 'lastName', title: "And your last name?", field: 'lastName', placeholder: "Enter your last name..." },
     { id: 'email', title: "What's your email address?", field: 'email', type: 'email', placeholder: "email@example.com" },
@@ -211,7 +217,11 @@ export default function RegistrationForm() {
             return;
           }
           // For other auth errors, we inform the user but they might need to try again
-          setError(`Identity verification failed: ${authErr.message}. Please try again.`);
+          if (authErr.code === 'auth/disallowed-useragent' || authErr.message?.includes('disallowed_useragent')) {
+            setError("Google blocks sign-in from this app (e.g. Messenger/FB). Please tap the menu (...) and select 'Open in Browser' to continue.");
+          } else {
+            setError(`Identity verification failed: ${authErr.message}. Please try again.`);
+          }
           setIsSubmitting(false);
           return;
         }
@@ -367,6 +377,43 @@ export default function RegistrationForm() {
               </div>
 
               <div className="pt-4">
+                {currentStepData.id === 'start' && (
+                  <div className="space-y-6">
+                    {isMobileWebview() && (
+                      <div className="p-6 bg-amber-500/10 border border-amber-500/20 rounded-[30px] flex gap-4 items-start text-left">
+                        <AlertCircle className="w-6 h-6 text-amber-500 shrink-0" />
+                        <div>
+                          <p className="text-amber-500 font-bold uppercase tracking-widest text-[10px]">Browser Warning</p>
+                          <p className="text-white text-sm mt-1">You are in an in-app browser. Google Sign-in may be blocked. Please use "Open in Browser".</p>
+                        </div>
+                      </div>
+                    )}
+                    <button 
+                      onClick={async () => {
+                        try {
+                          setError(null);
+                          await signInWithGoogle();
+                          nextStep();
+                        } catch (err: any) {
+                          if (err.code === 'auth/disallowed-useragent' || err.message?.includes('disallowed_useragent')) {
+                            setError("Google blocks sign-in here. Please use 'Open in Browser'.");
+                          } else {
+                            setError(err.message);
+                          }
+                        }
+                      }}
+                      className="w-full py-8 bg-white text-[#0a0a0a] rounded-[35px] font-black uppercase tracking-[0.2em] text-lg hover:scale-105 active:scale-95 transition-all shadow-2xl flex items-center justify-center gap-4"
+                    >
+                      <Zap className="w-6 h-6 fill-[#0a0a0a]" />
+                      Sign In with Google
+                    </button>
+                    <div className="flex items-center gap-4 py-4">
+                      <div className="h-px bg-white/10 flex-1"></div>
+                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.5em]">Or Continue</span>
+                      <div className="h-px bg-white/10 flex-1"></div>
+                    </div>
+                  </div>
+                )}
                 {currentStepData.id === 'firstName' && <InputField placeholder={currentStepData.placeholder} value={formData.firstName} onChange={v => setFormData({...formData, firstName: v})} />}
                 {currentStepData.id === 'lastName' && <InputField placeholder={currentStepData.placeholder} value={formData.lastName} onChange={v => setFormData({...formData, lastName: v})} />}
                 {currentStepData.id === 'email' && <InputField type="email" placeholder={currentStepData.placeholder} icon={<Mail className="w-5 h-5"/>} value={formData.email} onChange={v => setFormData({...formData, email: v})} />}
@@ -411,9 +458,17 @@ export default function RegistrationForm() {
               </div>
 
               {error && (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 text-red-500 font-bold uppercase tracking-widest text-[10px]">
-                  <AlertCircle className="w-4 h-4" />
-                  {error}
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-2 p-6 bg-red-500/10 border border-red-500/20 rounded-[30px]">
+                  <div className="flex items-center gap-2 text-red-500 font-bold uppercase tracking-widest text-[10px]">
+                    <AlertCircle className="w-4 h-4" />
+                    System Error
+                  </div>
+                  <p className="text-white text-sm font-medium italic">{error}</p>
+                  {isMobileWebview() && (
+                    <p className="text-slate-400 text-[10px] uppercase font-black tracking-widest mt-2">
+                       Hint: Tap ... then "Open in Browser"
+                    </p>
+                  )}
                 </motion.div>
               )}
             </motion.div>
