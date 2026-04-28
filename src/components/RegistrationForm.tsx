@@ -219,17 +219,28 @@ export default function RegistrationForm() {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       const img = new Image();
+      
       img.onload = () => {
-        canvas.width = img.width;
-        canvas.height = img.height;
+        // Increase resolution for better quality
+        const scale = 4;
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        ctx?.scale(scale, scale);
         ctx?.drawImage(img, 0, 0);
+        
         const pngFile = canvas.toDataURL('image/png');
         const link = document.createElement('a');
         link.download = `JLYCC_QR_${successInfo?.name.replace(/\s+/g, '_')}.png`;
         link.href = pngFile;
+        link.style.display = 'none';
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
       };
-      img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+      
+      // Use encodeURIComponent to handle non-ASCII characters safely
+      const encodedData = window.btoa(unescape(encodeURIComponent(svgData)));
+      img.src = 'data:image/svg+xml;base64,' + encodedData;
     }
   };
 
