@@ -1,0 +1,41 @@
+{
+  "entities": {
+    "Registration": {
+      "title": "Seminar Registration",
+      "description": "Registration details for the multimedia seminar",
+      "type": "object",
+      "properties": {
+        "firstName": { "type": "string", "description": "First name of the participant" },
+        "lastName": { "type": "string", "description": "Last name of the participant" },
+        "email": { "type": "string", "format": "email", "description": "Email address" },
+        "facebookUrl": { "type": "string", "description": "Facebook Profile URL" },
+        "instagramHandle": { "type": "string", "description": "Instagram Handle" },
+        "telegramHandle": { "type": "string", "description": "Telegram Handle" },
+        "contactNumber": { "type": "string", "description": "Contact number" },
+        "department": { "type": "string", "description": "Department or Organization" },
+        "role": { "type": "string", "description": "Role or Position" },
+        "churchBranch": { "type": "string", "description": "JLYCC Church Branch" },
+        "experience": { "type": "string", "enum": ["Beginner", "Intermediate", "Advanced"] },
+        "topics": { "type": "array", "items": { "type": "string" }, "description": "Topics of interest" },
+        "learnGoals": { "type": "string", "description": "What they want to learn" },
+        "equipment": { "type": "array", "items": { "type": "string" }, "description": "Equipment they own" },
+        "challenges": { "type": "array", "items": { "type": "string" }, "description": "Challenges they face" },
+        "cameraFraming": { "type": "string", "enum": ["Yes", "No", "A little"] },
+        "lightingTerms": { "type": "string", "enum": ["Yes", "No", "A little"] },
+        "soundMixer": { "type": "string", "enum": ["Yes", "No", "A little"] },
+        "preferredSchedule": { "type": "string", "description": "Preferred date and time" },
+        "willAttend": { "type": "string", "enum": ["Yes", "Maybe", "No"] },
+        "questions": { "type": "string", "description": "Questions for the trainer" },
+        "committed": { "type": "boolean", "description": "Commitment checkbox" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "email", "contactNumber", "willAttend", "committed"]
+    }
+  },
+  "firestore": {
+    "/registrations/{registrationId}": {
+      "schema": "Registration",
+      "description": "Collection of seminar registrations"
+    }
+  }
+}

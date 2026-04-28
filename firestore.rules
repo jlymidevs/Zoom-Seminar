@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+             request.auth.token.email_verified == true && 
+             request.auth.token.email in [
+               'jlymi.devs@gmail.com', 
+               'rad4862@gmail.com', 
+               'ianrae.agustin@gmail.com', 
+               'kennethkimetos@gmail.com'
+             ];
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for Registration
+    function isValidRegistration(data) {
+      return data.firstName is string && data.firstName.size() > 0 && data.firstName.size() <= 100 &&
+             data.lastName is string && data.lastName.size() > 0 && data.lastName.size() <= 100 &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 200 &&
+             (data.get('facebookUrl', '') is string) && (data.get('facebookUrl', '').size() <= 300) &&
+             (data.get('instagramHandle', '') is string) && (data.get('instagramHandle', '').size() <= 100) &&
+             (data.get('telegramHandle', '') is string) && (data.get('telegramHandle', '').size() <= 100) &&
+             data.contactNumber is string && data.contactNumber.size() > 0 && data.contactNumber.size() <= 50 &&
+             (data.get('department', '') is string) && (data.get('department', '').size() <= 200) &&
+             (data.get('role', '') is string) && (data.get('role', '').size() <= 200) &&
+             data.churchBranch is string && data.churchBranch.size() > 0 && data.churchBranch.size() <= 100 &&
+             (data.get('experience', '') in ['', 'Beginner', 'Intermediate', 'Advanced']) &&
+             (data.get('topics', []) is list) &&
+             (data.get('learnGoals', '') is string) && (data.get('learnGoals', '').size() <= 1000) &&
+             (data.get('equipment', []) is list) &&
+             (data.get('challenges', []) is list) &&
+             (data.get('cameraFraming', '') in ['', 'Yes', 'No', 'A little']) &&
+             (data.get('lightingTerms', '') in ['', 'Yes', 'No', 'A little']) &&
+             (data.get('soundMixer', '') in ['', 'Yes', 'No', 'A little']) &&
+             (data.get('preferredSchedule', '') is string) && (data.get('preferredSchedule', '').size() <= 200) &&
+             (data.get('willAttend', '') in ['Yes', 'Maybe', 'No']) &&
+             (data.get('questions', '') is string) && (data.get('questions', '').size() <= 1000) &&
+             data.committed is bool && data.committed == true &&
+             data.createdAt == request.time;
+    }
+
+    match /registrations/{registrationId} {
+      allow create: if isValidId(registrationId) && isValidRegistration(incoming());
+      allow read: if isAdmin();
+      // No updates or deletes allowed for now
+      allow update, delete: if isAdmin();
+    }
+  }
+}
